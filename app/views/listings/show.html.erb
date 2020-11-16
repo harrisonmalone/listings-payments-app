@@ -1,0 +1,9 @@
+  <div class="listing">
+    <p>Name: <%= @listing.name %></p>
+    <p>Price: <%= number_to_currency(@listing.price / 100.0) %></p>
+    <button id="stripe">Pay</button>
+    <%= link_to "Back", :back %>
+    <hr>
+  </div>
+
+  <%= javascript_pack_tag "stripe" %>
