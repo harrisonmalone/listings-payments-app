@@ -1,6 +1,6 @@
 class PaymentsController < ApplicationController
-  before_action :authenticate_user!
-  skip_before_action :verify_authenticity_token, only: [:create]
+  before_action :authenticate_user!, except: [:webhook]
+  skip_before_action :verify_authenticity_token, only: [:create, :webhook]
 
   def create 
     listing = Listing.find(params[:id])
@@ -21,6 +21,29 @@ class PaymentsController < ApplicationController
       cancel_url: "#{root_url}payments/cancel"
     })
     render json: { id: session.id }
+  end
+
+  def webhook 
+    endpoint_secret = "whsec_9FYlJ1AsdgOWmvDNjbTy1LYlV74Ma6f6"
+    begin
+      sig_header = request.env['HTTP_STRIPE_SIGNATURE']
+      payload = request.body.read
+      event = Stripe::Webhook.construct_event(payload, sig_header, endpoint_secret)
+    rescue JSON::ParserError => e
+      # Invalid payload
+      return status 400
+    rescue Stripe::SignatureVerificationError => e
+      # Invalid signature
+      return status 400
+    end
+    case event['type']
+    when 'checkout.session.completed'
+      checkout_session = event['data']['object']
+      # write to the database to confirm that a listing has actually been sold 
+    when 'checkout.session.async_payment_failed'
+      # write to the database that a listing is still available
+      # reach out to the customer to say that the payment was unsuccessful
+    end
   end
   
   def success
